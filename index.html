@@ -3,40 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Babble Admin</title>
+    <title>Babble 💬</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; background-color: #0f172a; font-family: sans-serif; }
+        html, body { height: 100%; margin: 0; overflow: hidden; background-color: #0f172a; }
         .chat-area { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-        #messages { scroll-behavior: smooth; }
         em-emoji-picker { position: absolute; bottom: 80px; left: 10px; right: 10px; z-index: 50; display: none; }
-        
-        /* Admin Modal Styling */
-        #admin-panel { display: none; z-index: 100; backdrop-blur: 10px; }
+        .tick { font-size: 10px; margin-left: 4px; transition: color 0.3s; }
     </style>
 </head>
 <body class="flex flex-col text-white">
 
-    <div id="admin-panel" class="fixed inset-0 bg-black/80 flex items-center justify-center p-6">
-        <div class="bg-gray-800 border-2 border-blue-500 w-full max-w-sm rounded-3xl p-6 shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-            <h2 class="text-xl font-black text-blue-400 mb-4 flex items-center justify-between">
-                <span>SYSTEM ADMIN</span>
-                <button onclick="toggleAdmin()" class="text-gray-500">✕</button>
-            </h2>
-            <div class="space-y-4">
-                <button onclick="location.reload()" class="w-full bg-red-600/20 border border-red-500 text-red-500 py-3 rounded-xl font-bold">FORCE WIPE SYSTEM</button>
-                <button onclick="copyMyId()" class="w-full bg-blue-600/20 border border-blue-500 text-blue-500 py-3 rounded-xl font-bold">COPY ADMIN ID</button>
-                <div class="p-3 bg-gray-900 rounded-xl border border-gray-700">
-                    <p class="text-[10px] text-gray-500 uppercase font-bold">Network Status</p>
-                    <p id="net-stat" class="text-xs text-green-400 font-mono">ENCRYPTED_P2P_ACTIVE</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <header class="bg-gray-800/80 backdrop-blur-md p-4 border-b border-gray-700 flex justify-between items-center z-10">
+    <header class="bg-gray-800/80 backdrop-blur-md p-4 border-b border-gray-700 flex justify-between items-center shadow-lg z-10">
         <div class="flex items-center space-x-2" onclick="handleLogoClick()">
             <span class="text-2xl cursor-pointer">💬</span>
             <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">Babble</h1>
@@ -45,28 +25,27 @@
     </header>
 
     <main class="flex-1 flex flex-col p-4 max-w-2xl mx-auto w-full overflow-hidden relative">
+        
         <div id="setup" class="space-y-6 mt-8">
             <div class="bg-gray-800 p-8 rounded-3xl border border-gray-700 text-center shadow-2xl">
-                <p class="text-[10px] text-gray-400 mb-2 font-black uppercase tracking-widest">Local Node ID</p>
-                <div id="my-id" class="text-xl font-mono text-blue-300 break-all py-3 px-4 bg-gray-900 rounded-xl border border-gray-700">Waiting...</div>
+                <p class="text-[10px] text-gray-400 mb-2 font-black uppercase tracking-widest">Your Device ID</p>
+                <div id="my-id" class="text-xl font-mono text-blue-300 break-all py-3 px-4 bg-gray-900 rounded-xl border border-gray-700 select-all">Generating...</div>
             </div>
-            <input type="text" id="peer-id-input" placeholder="Friend's Node ID..." class="w-full bg-gray-800 p-5 rounded-2xl border border-gray-700 focus:outline-none focus:border-blue-500">
-            <button id="connect-btn" class="w-full bg-blue-600 active:scale-95 py-5 rounded-2xl font-black text-lg">Initialize Chat 🚀</button>
+            <input type="text" id="peer-id-input" placeholder="Paste friend's ID..." class="w-full bg-gray-800 p-5 rounded-2xl border border-gray-700 focus:outline-none text-white">
+            <button id="connect-btn" class="w-full bg-blue-600 active:scale-95 py-5 rounded-2xl font-black text-lg transition-all">Start Chat 🚀</button>
         </div>
 
         <div id="chat-window" class="hidden flex flex-col h-full overflow-hidden">
-            <div class="bg-blue-500/10 border border-blue-500/20 p-3 rounded-2xl mb-4 flex items-center justify-center space-x-2">
-                <span class="text-sm">🛡️</span>
-                <p class="text-[10px] uppercase tracking-widest text-blue-300 font-black">Encrypted • Ephemeral • Secure</p>
-            </div>
             <div id="messages" class="chat-area space-y-4 pb-4 px-1"></div>
             <div id="picker-container"></div>
-            <div class="flex items-center space-x-2 bg-gray-800/90 p-2 rounded-2xl border border-gray-700 mb-2 shadow-2xl relative">
+            <div class="flex items-center space-x-2 bg-gray-800 p-2 rounded-2xl border border-gray-700 mb-2 relative">
                 <button id="emoji-trigger" class="p-2 text-xl">😀</button>
                 <button onclick="document.getElementById('file-input').click()" class="p-2 text-xl text-gray-400">📎</button>
                 <input type="file" id="file-input" class="hidden">
-                <input type="text" id="msg-input" placeholder="Direct message..." class="flex-1 bg-transparent p-3 focus:outline-none text-[16px]">
-                <button id="send-btn" class="bg-blue-600 p-3 rounded-xl"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 rotate-45" viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+                <input type="text" id="msg-input" placeholder="Message..." class="flex-1 bg-transparent p-3 focus:outline-none text-white">
+                <button id="send-btn" class="bg-blue-600 p-3 rounded-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 rotate-45 fill-white" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
             </div>
         </div>
     </main>
@@ -74,24 +53,6 @@
     <script>
         const peer = new Peer();
         let connection;
-        let logoClicks = 0;
-
-        // Admin Logic
-        function handleLogoClick() {
-            logoClicks++;
-            if (logoClicks >= 5) {
-                toggleAdmin();
-                logoClicks = 0;
-            }
-        }
-        function toggleAdmin() {
-            const panel = document.getElementById('admin-panel');
-            panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
-        }
-        function copyMyId() {
-            navigator.clipboard.writeText(document.getElementById('my-id').innerText);
-            alert("Admin ID copied to clipboard!");
-        }
 
         // Emoji Logic
         const pickerOptions = { onEmojiSelect: (emoji) => { document.getElementById('msg-input').value += emoji.native; togglePicker(); }, theme: 'dark' };
@@ -100,7 +61,6 @@
         function togglePicker() { picker.style.display = (picker.style.display === 'none' || picker.style.display === '') ? 'block' : 'none'; }
         document.getElementById('emoji-trigger').addEventListener('click', (e) => { e.stopPropagation(); togglePicker(); });
 
-        // Core Logic
         const myIdDisplay = document.getElementById('my-id');
         const connectBtn = document.getElementById('connect-btn');
         const peerIdInput = document.getElementById('peer-id-input');
@@ -108,7 +68,6 @@
         const setupWindow = document.getElementById('setup');
         const msgInput = document.getElementById('msg-input');
         const sendBtn = document.getElementById('send-btn');
-        const fileInput = document.getElementById('file-input');
         const messagesDiv = document.getElementById('messages');
         const statusDot = document.getElementById('status-dot');
 
@@ -128,36 +87,32 @@
             setupWindow.classList.add('hidden');
             chatWindow.classList.remove('hidden');
             statusDot.className = "h-3 w-3 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]";
+
             connection.on('data', (data) => {
-                if (data.file) displayFile(data.file, data.fileType, data.fileName, 'friend');
-                else addMessage(data, 'friend');
+                // If it's a delivery receipt
+                if (data.type === 'delivered') {
+                    const tickEl = document.getElementById(`tick-${data.msgId}`);
+                    if (tickEl) {
+                        tickEl.innerText = '✓✓';
+                        tickEl.classList.add('text-blue-400');
+                    }
+                    return;
+                }
+
+                // If it's a message, send back receipt
+                if (data.msgId) {
+                    connection.send({ type: 'delivered', msgId: data.msgId });
+                    addMessage(data.text, 'friend');
+                }
             });
-        }
-
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file || !connection) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                const fileData = { file: reader.result, fileName: file.name, fileType: file.type };
-                connection.send(fileData);
-                displayFile(fileData.file, fileData.fileType, fileData.fileName, 'me');
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        function displayFile(blobData, type, name, sender) {
-            const blob = new Blob([blobData], { type: type });
-            const url = URL.createObjectURL(blob);
-            const content = type.startsWith('image/') ? `<img src="${url}" class="file-preview">` : `<a href="${url}" download="${name}" class="text-blue-400 underline">📁 ${name}</a>`;
-            addMessage(content, sender, true);
         }
 
         function sendMessage() {
             const text = msgInput.value.trim();
             if (text && connection) {
-                connection.send(text);
-                addMessage(text, 'me');
+                const msgId = Date.now(); // Unique ID for this message
+                connection.send({ text: text, msgId: msgId });
+                addMessage(text, 'me', false, msgId);
                 msgInput.value = '';
                 picker.style.display = 'none';
             }
@@ -166,13 +121,23 @@
         sendBtn.addEventListener('click', sendMessage);
         msgInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
 
-        function addMessage(content, sender, isHTML = false) {
+        function addMessage(content, sender, isHTML = false, msgId = null) {
             const div = document.createElement('div');
             const isMe = sender === 'me';
             div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300 mb-4`;
-            div.innerHTML = `<div class="max-w-[85%] px-4 py-3 rounded-2xl shadow-xl ${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-gray-800 border border-gray-700 rounded-tl-none'}">
-                ${isHTML ? content : `<p class="text-[15px]">${content}</p>`}
-            </div>`;
+            
+            const tickHtml = isMe ? `<span id="tick-${msgId}" class="tick text-gray-500">✓</span>` : '';
+
+            div.innerHTML = `
+                <div class="max-w-[85%] px-4 py-3 rounded-2xl shadow-xl ${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-gray-800 border border-gray-700 rounded-tl-none'}">
+                    <div class="flex flex-col">
+                        <p class="text-[15px] leading-snug">${content}</p>
+                        <div class="flex justify-end items-center mt-1">
+                            ${tickHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
             messagesDiv.appendChild(div);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
