@@ -75,7 +75,7 @@
             <div class="flex items-center space-x-2 bg-gray-800/80 backdrop-blur-xl p-2 rounded-[1.5rem] border border-gray-700 mb-1">
                 <button id="emoji-trigger" class="w-12 h-12 text-2xl">😀</button>
                 <button onclick="document.getElementById('file-input').click()" class="w-12 h-12 text-2xl text-gray-400">📎</button>
-                <input type="file" id="file-input" class="hidden" accept="image/*" capture="environment">
+                <input type="file" id="file-input" class="hidden" accept="image/*">
                 <input type="text" id="msg-input" placeholder="Message" class="flex-1 bg-transparent p-3 focus:outline-none text-white">
                 <button id="send-btn" class="bg-blue-600 w-12 h-12 flex items-center justify-center rounded-2xl">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 rotate-45 fill-white" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -123,10 +123,19 @@
             if (id) setupConnection(peer.connect(id));
         });
 
+        // Track local visibility to send to peer
+        document.addEventListener('visibilitychange', () => {
+            if (connection && connection.open) {
+                connection.send({ 
+                    type: 'visibility', 
+                    status: document.hidden ? 'away' : 'back' 
+                });
+            }
+        });
+
         function setupConnection(conn) {
             connection = conn;
-            
-            // Notification: Person Joined
+
             connection.on('open', () => {
                 setupWindow.classList.add('hidden');
                 chatWindow.classList.remove('hidden');
@@ -135,7 +144,6 @@
                 addSystemMessage("Peer joined the session 🟢");
             });
 
-            // Notification: Person Left
             connection.on('close', () => {
                 document.getElementById('status-dot').className = "h-3 w-3 rounded-full bg-red-500";
                 addSystemMessage("Peer left the session 🔴");
@@ -150,6 +158,14 @@
                     return; 
                 }
                 if (data.type === 'typing') { document.getElementById('typing-indicator').classList.remove('hidden'); return; }
+                
+                // Handle Visibility Notifications from Peer
+                if (data.type === 'visibility') {
+                    if (data.status === 'away') addSystemMessage("Peer minimized the app ⚠️");
+                    if (data.status === 'back') addSystemMessage("Peer is back 👁️");
+                    return;
+                }
+
                 document.getElementById('typing-indicator').classList.add('hidden');
                 if (data.file) displayFile(data.file, data.fileType, data.fileName, 'friend');
                 else addMessage(data.text, 'friend');
@@ -224,8 +240,10 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = () => {
-                connection.send({ file: reader.result, fileName: file.name, fileType: file.type });
-                displayFile(reader.result, file.type, file.name, 'me');
+                if (connection) {
+                    connection.send({ file: reader.result, fileName: file.name, fileType: file.type });
+                    displayFile(reader.result, file.type, file.name, 'me');
+                }
             };
             reader.readAsArrayBuffer(file);
         });
