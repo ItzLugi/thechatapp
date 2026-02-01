@@ -24,7 +24,6 @@
         .tick { font-size: 10px; margin-left: 4px; }
         input, button { font-size: 16px !important; }
         
-        /* Anti-Save / Anti-Screenshot Styles */
         .no-save {
             -webkit-touch-callout: none !important;
             -webkit-user-select: none !important;
@@ -76,7 +75,7 @@
             <div class="flex items-center space-x-2 bg-gray-800/80 backdrop-blur-xl p-2 rounded-[1.5rem] border border-gray-700 mb-1">
                 <button id="emoji-trigger" class="w-12 h-12 text-2xl">😀</button>
                 <button onclick="document.getElementById('file-input').click()" class="w-12 h-12 text-2xl text-gray-400">📎</button>
-                <input type="file" id="file-input" class="hidden" accept="image/*">
+                <input type="file" id="file-input" class="hidden" accept="image/*" capture="environment">
                 <input type="text" id="msg-input" placeholder="Message" class="flex-1 bg-transparent p-3 focus:outline-none text-white">
                 <button id="send-btn" class="bg-blue-600 w-12 h-12 flex items-center justify-center rounded-2xl">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 rotate-45 fill-white" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -126,10 +125,21 @@
 
         function setupConnection(conn) {
             connection = conn;
-            setupWindow.classList.add('hidden');
-            chatWindow.classList.remove('hidden');
-            document.getElementById('status-dot').className = "h-3 w-3 rounded-full bg-green-500";
-            document.getElementById('ping-display').classList.remove('hidden');
+            
+            // Notification: Person Joined
+            connection.on('open', () => {
+                setupWindow.classList.add('hidden');
+                chatWindow.classList.remove('hidden');
+                document.getElementById('status-dot').className = "h-3 w-3 rounded-full bg-green-500";
+                document.getElementById('ping-display').classList.remove('hidden');
+                addSystemMessage("Peer joined the session 🟢");
+            });
+
+            // Notification: Person Left
+            connection.on('close', () => {
+                document.getElementById('status-dot').className = "h-3 w-3 rounded-full bg-red-500";
+                addSystemMessage("Peer left the session 🔴");
+            });
 
             setInterval(() => { if(connection.open) connection.send({ type: 'ping', time: Date.now() }); }, 3000);
 
@@ -146,10 +156,17 @@
             });
         }
 
+        function addSystemMessage(text) {
+            const div = document.createElement('div');
+            div.className = "w-full flex justify-center my-2";
+            div.innerHTML = `<span class="bg-black/20 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full text-gray-400">${text}</span>`;
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
         function displayFile(blobData, type, name, sender) {
             const url = URL.createObjectURL(new Blob([blobData], { type: type }));
             let content;
-            
             if (type.startsWith('image/')) {
                 const id = `img-${Date.now()}`;
                 content = `
@@ -161,7 +178,7 @@
                         </div>
                         <div class="watermark-overlay">${Array(15).fill('PRIVATE').join(' ')}</div>
                         <img src="${url}" class="w-full no-save opacity-0 transition-opacity duration-300" id="raw-${id}">
-                        <div class="absolute bottom-2 right-2 z-[60] bg-red-600 text-[8px] px-2 py-1 rounded-full font-bold">
+                        <div id="timer-badge-${id}" class="hidden absolute bottom-2 right-2 z-[60] bg-red-600 text-[8px] px-2 py-1 rounded-full font-bold">
                             DESTROYS IN <span id="timer-${id}">10</span>s
                         </div>
                     </div>`;
@@ -170,24 +187,31 @@
                     const shield = document.querySelector(`#${id} .img-shield`);
                     const blur = document.getElementById(`blur-${id}`);
                     const img = document.getElementById(`raw-${id}`);
+                    const badge = document.getElementById(`timer-badge-${id}`);
+                    let timerStarted = false;
+                    let timeLeft = 10;
                     
-                    const show = () => { blur.style.opacity = '0'; img.style.opacity = '1'; };
+                    const show = () => { 
+                        blur.style.opacity = '0'; 
+                        img.style.opacity = '1'; 
+                        if (!timerStarted) {
+                            timerStarted = true;
+                            badge.classList.remove('hidden');
+                            const timer = setInterval(() => {
+                                timeLeft--;
+                                const el = document.getElementById(`timer-${id}`);
+                                if (el) el.innerText = timeLeft;
+                                if (timeLeft <= 0) {
+                                    clearInterval(timer);
+                                    document.getElementById(id).innerHTML = `<div class="p-6 text-center text-gray-600 text-[10px] font-black italic uppercase">🔥 Image Expired</div>`;
+                                    URL.revokeObjectURL(url);
+                                }
+                            }, 1000);
+                        }
+                    };
                     const hide = () => { blur.style.opacity = '1'; img.style.opacity = '0'; };
-                    
                     shield.addEventListener('touchstart', show); shield.addEventListener('touchend', hide);
                     shield.addEventListener('mousedown', show); shield.addEventListener('mouseup', hide);
-
-                    let timeLeft = 10;
-                    const timer = setInterval(() => {
-                        timeLeft--;
-                        const el = document.getElementById(`timer-${id}`);
-                        if (el) el.innerText = timeLeft;
-                        if (timeLeft <= 0) {
-                            clearInterval(timer);
-                            document.getElementById(id).innerHTML = `<div class="p-6 text-center text-gray-600 text-[10px] font-black italic uppercase">🔥 Image Expired</div>`;
-                            URL.revokeObjectURL(url);
-                        }
-                    }, 1000);
                 }, 100);
             } else {
                 content = `<a href="${url}" download="${name}" class="text-blue-400 underline font-bold">📁 ${name}</a>`;
