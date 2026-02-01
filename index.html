@@ -75,7 +75,11 @@
             <div class="flex items-center space-x-2 bg-gray-800/80 backdrop-blur-xl p-2 rounded-[1.5rem] border border-gray-700 mb-1">
                 <button id="emoji-trigger" class="w-12 h-12 text-2xl">😀</button>
                 <button onclick="document.getElementById('file-input').click()" class="w-12 h-12 text-2xl text-gray-400">📎</button>
-                <input type="file" id="file-input" class="hidden" accept="image/*">
+                <button onclick="document.getElementById('camera-input').click()" class="w-12 h-12 text-2xl">📸</button>
+                
+                <input type="file" id="file-input" class="hidden" accept="image/*, .pdf, .txt, .docx">
+                <input type="file" id="camera-input" class="hidden" accept="image/*" capture="environment">
+                
                 <input type="text" id="msg-input" placeholder="Message" class="flex-1 bg-transparent p-3 focus:outline-none text-white">
                 <button id="send-btn" class="bg-blue-600 w-12 h-12 flex items-center justify-center rounded-2xl">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 rotate-45 fill-white" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -123,7 +127,6 @@
             if (id) setupConnection(peer.connect(id));
         });
 
-        // Track local visibility to send to peer
         document.addEventListener('visibilitychange', () => {
             if (connection && connection.open) {
                 connection.send({ 
@@ -159,7 +162,6 @@
                 }
                 if (data.type === 'typing') { document.getElementById('typing-indicator').classList.remove('hidden'); return; }
                 
-                // Handle Visibility Notifications from Peer
                 if (data.type === 'visibility') {
                     if (data.status === 'away') addSystemMessage("Peer minimized the app ⚠️");
                     if (data.status === 'back') addSystemMessage("Peer is back 👁️");
@@ -235,7 +237,7 @@
             addMessage(content, sender, true);
         }
 
-        document.getElementById('file-input').addEventListener('change', (e) => {
+        const handleFileUpload = (e) => {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -246,7 +248,11 @@
                 }
             };
             reader.readAsArrayBuffer(file);
-        });
+            e.target.value = ''; // Reset for same-file re-upload
+        };
+
+        document.getElementById('file-input').addEventListener('change', handleFileUpload);
+        document.getElementById('camera-input').addEventListener('change', handleFileUpload);
 
         document.getElementById('send-btn').addEventListener('click', () => {
             const text = msgInput.value.trim();
